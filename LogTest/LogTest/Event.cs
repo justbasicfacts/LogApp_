@@ -3,37 +3,59 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace LogApp
+namespace EventLogProject
 {
-    public class Event
+    public class Event : EventLog
     {
         [BsonIgnore]
-        private readonly EventLog _startLog;
+        private readonly long _startTimeStamp;
         [BsonIgnore]
-        private readonly EventLog _endLog;
+        private long _endTimeStamp;
 
         public Event() { }
-        public Event(EventLog startLog, EventLog endLog)
+        public Event(EventLog log) : base()
         {
-            _startLog = startLog;
-            _endLog = endLog;
+            if (State == EventState.STARTED)
+            {
+                _startTimeStamp = log.TimeStamp;
+            }
 
-            EventID = startLog.ID;
-            Host = startLog.Host;
-            EventType = startLog.Type;
-            Duration = endLog.TimeStamp - startLog.TimeStamp;
+            if (State == EventState.FINISHED)
+            {
+                _endTimeStamp = log.TimeStamp;
+            }
+
+            Host = log.Host;
+            ID = log.ID;
+            State = log.State;
+            Type = log.Type;
         }
 
-        public long Duration { get; set; }
-        public string Host { get; set; }
-        public EventType EventType { get; set; }
-        [BsonId]
-        public string EventID { get; set; }
-        public bool IsValid()
+        public long GetDuration()
         {
-            return this._startLog != null && this._endLog != null && this._endLog.TimeStamp - this._startLog.TimeStamp < 4;
+            long retVal = 0;
+            if (State == EventState.FINISHED)
+            {
+                retVal = _endTimeStamp - _startTimeStamp;
+            }
+
+            return retVal;
         }
 
+        public void SetEndDate(long timeStamp)
+        {
+            _endTimeStamp = timeStamp;
+        }
+
+        public void SetAsFinished()
+        {
+            this.State = EventState.FINISHED;
+        }
+
+        public bool IsValidEvent()
+        {
+            return _startTimeStamp > 0 && _endTimeStamp > 0 && _endTimeStamp > _startTimeStamp;
+        }
 
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace LogApp
+﻿namespace EventLogProject
 {
     public enum EventState
     {
