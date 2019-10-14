@@ -17,18 +17,13 @@ namespace EventLogProject
         public EventLogsFileProcessor(string path)
         {
             _path = path;
-            _eventlogDictinoary = new ConcurrentDictionary<string, Event>();
+            _eventLogDictionary = new ConcurrentDictionary<string, Event>();
         }
 
         private readonly string _path;
-        private ConcurrentDictionary<string, Event> _eventlogDictinoary;
-        private EventLogProcessor eventLogProcessor = new EventLogProcessor();
+        private ConcurrentDictionary<string, Event> _eventLogDictionary;
 
-        public void ProcessLogs(bool isAsync = false)
-        {
-            ProcessFile(isAsync);
-        }
-        private void ProcessFile(bool isAsync)
+        public async void ProcessFile()
         {
             using (LiteDatabase db = new LiteDatabase(@"Events.db"))
             {
@@ -37,25 +32,22 @@ namespace EventLogProject
                 {
                     while (!streamReader.EndOfStream)
                     {
-                        string line = streamReader.ReadLine();
+                        string line = await streamReader.ReadLineAsync();
                         var logFile = GetLogFileObject(line);
-                        ProcessEvent(logFile);
+                        if (events.Count(e => e.ID == logFile.ID) == 0)
+                        {
+                            var currentEvent = await Task.Run(() => ProcessEvent(logFile));
+                            if (currentEvent.State == EventState.FINISHED && currentEvent.IsValidEvent() && currentEvent.GetDuration() > 4)
+                            {
+                                currentEvent.Alert = true;
+                                events.Insert(currentEvent);
+                            }
+                        }
                     }
                 }
-                var filtered = _eventlogDictinoary.Where(t => t.Value.IsValidEvent()).Select(t => t.Value);
-                Parallel.ForEach(filtered, new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = new CancellationToken() }, current =>
-                {
-                    lock (events)
-                    {
-                        events.Insert(current);
-                    }
-                });
-            }
-        }
 
-        private Event ProcessAsync(EventLog currentEventLog)
-        {
-            return ProcessEvent(currentEventLog);
+                db.Commit();
+            }
         }
 
         private Event ProcessEvent(EventLog currentEventLog)
@@ -63,7 +55,7 @@ namespace EventLogProject
             try
             {
                 var currentEvent = BuildEvent(currentEventLog);
-                _eventlogDictinoary.AddOrUpdate(currentEventLog.ID, currentEvent, (key, value) => value = currentEvent);
+                _eventLogDictionary.AddOrUpdate(currentEventLog.ID, currentEvent, (key, value) => value = currentEvent);
                 return currentEvent;
             }
             catch (Exception ex)
@@ -99,9 +91,7 @@ namespace EventLogProject
 
         private Event GetEventByID(string id)
         {
-
-            _eventlogDictinoary.TryGetValue(id, out Event @event);
-
+            _eventLogDictionary.TryGetValue(id, out Event @event);
             return @event;
         }
 

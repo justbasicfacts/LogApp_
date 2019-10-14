@@ -5,14 +5,15 @@ using System.Text;
 
 namespace EventLogProject
 {
-    public class Event : EventLog
+    public class Event
     {
         [BsonIgnore]
         private readonly long _startTimeStamp;
         [BsonIgnore]
         private long _endTimeStamp;
 
-        public Event() { }
+        public bool Alert { get; set; }
+        public Event() : base() { }
         public Event(EventLog log) : base()
         {
             if (State == EventState.STARTED)
@@ -56,6 +57,13 @@ namespace EventLogProject
         {
             return _startTimeStamp > 0 && _endTimeStamp > 0 && _endTimeStamp > _startTimeStamp;
         }
+
+        public string ID { get; set; }
+        public EventState State { get; set; }
+        public EventType Type { get; set; }
+        public long TimeStamp { get; set; }
+        public string Host { get; set; }
+
 
     }
 }
