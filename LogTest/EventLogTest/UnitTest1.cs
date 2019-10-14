@@ -6,7 +6,7 @@ namespace LogAppTest
     [TestClass]
     public class LogAppUnitTest
     {
-        private const string Path = @"D:\logTest.txt";
+        private const string Path = @"hadi len";
         private const string LongPath= @"D:\lgbig.txt";
 
         [TestMethod]
